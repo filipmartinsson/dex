@@ -1,61 +1,72 @@
 pragma solidity >=0.6.0 <0.8.0;
 pragma experimental ABIEncoderV2;
-import './wallet.sol';
 
+import "./wallet.sol";
 
 contract Dex is Wallet {
+
+    using SafeMath for uint256;
+
     enum Side {
         BUY,
         SELL
     }
-    
+
     struct Order {
         uint id;
         address trader;
         Side side;
         bytes32 ticker;
         uint amount;
-        uint filled;
         uint price;
-        uint date;
     }
+
+    uint public nextOrderId;
 
     mapping(bytes32 => mapping(uint => Order[])) public orderBook;
-    uint public nextOrderId;
-    uint public nextTradeId;
 
-    function getOrderBook(bytes32 ticker, Side side) view public returns (Order[] memory){
+    function getOrderBook(bytes32 ticker, Side side) view public returns(Order[] memory){
         return orderBook[ticker][uint(side)];
     }
-    
-    function createLimitOrder(bytes32 ticker, uint amount, uint price, Side side) tokenExist(ticker) external {
-        if(side == Side.SELL) {
-            require(
-                traderBalances[msg.sender][ticker] >= amount, 
-                'token balance too low'
-            );
-        } else {
-            require(
-                traderBalances[msg.sender]["ETH"] >= amount * price,
-                'eth balance too low'
-            );
+
+    function createLimitOrder(Side side, bytes32 ticker, uint amount, uint price) public{
+        if(side == Side.BUY){
+            require(balances[msg.sender]["ETH"] >= amount.mul(price), "Balance too low");
         }
+        if(side == Side.SELL){
+            require(balances[msg.sender][ticker] >= amount, "Balance too low");
+        }
+
         Order[] storage orders = orderBook[ticker][uint(side)];
-        orders.push(Order(nextOrderId, msg.sender, side, ticker, amount, 0, price, block.timestamp ));
-        
-        uint i = orders.length - 1;
-        while(i > 0) {
-            if(side == Side.BUY && orders[i - 1].price > orders[i].price) {
-                break;   
+        orders.push(Order(nextOrderId, msg.sender, side, ticker, amount, price));
+        Order storage newOrder = orders[orders.length - 1];
+
+        uint i = orders.length > 0 ? orders.length - 1 : 0;
+
+        if(side == Side.BUY){
+            while(i > 0){
+                if(orders[i - 1].price > orders[i].price) {
+                    break;   
+                }
+                Order memory orderToMove = orders[i - 1];
+                orders[i - 1] = orders[i];
+                orders[i] = orderToMove;
+                i--;
             }
-            if(side == Side.SELL && orders[i - 1].price < orders[i].price) {
-                break;   
+        }
+        else if (side == Side.SELL){
+            while(i > 0){
+                if(orders[i - 1].price < orders[i].price) {
+                    break;   
+                }
+                Order memory orderToMove = orders[i - 1];
+                orders[i - 1] = orders[i];
+                orders[i] = orderToMove;
+                i--;
             }
-            Order memory order = orders[i - 1];
-            orders[i - 1] = orders[i];
-            orders[i] = order;
-            i--;
         }
         nextOrderId++;
+
     }
+
 }
