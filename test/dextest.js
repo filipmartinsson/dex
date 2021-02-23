@@ -31,8 +31,8 @@ contract("Dex", accounts => {
             dex.createLimitOrder(1, web3.utils.fromUtf8("LINK"), 10, 1)
         )
     })
-    //The first order ([0]) in the BUY order book should have the highest price
-    it("first order in the BUY order book should have the highest price", async () => {
+    //The BUY order book should be ordered on price from highest to lowest starting at index 0
+    it("The BUY order book should be ordered on price from highest to lowest starting at index 0", async () => {
         let dex = await Dex.deployed()
         let link = await Link.deployed()
         await link.approve(dex.address, 500);
@@ -46,8 +46,8 @@ contract("Dex", accounts => {
             assert(orderbook[i] >= orderbook[i+1])
         }
     })
-    //The first order ([0]) in the SELL order book should have the lowest price
-    it("first order in the SELL order book should have the lowest price", async () => {
+    //The SELL order book should be ordered on price from lowest to highest starting at index 0
+    it("The SELL order book should be ordered on price from lowest to highest starting at index 0", async () => {
         let dex = await Dex.deployed()
         let link = await Link.deployed()
         await link.approve(dex.address, 500);
