@@ -18,7 +18,7 @@ contract("Dex", accounts => {
     it("Market orders can be submitted even if the order book is empty", async () => {
         let dex = await Dex.deployed()
         
-        await dex.depositEth({value: 10000});
+        await dex.depositEth({value: 50000});
 
         let orderbook = await dex.getOrderBook(web3.utils.fromUtf8("LINK"), 0); //Get buy side orderbook
         assert(orderbook.length == 0, "Buy side Orderbook length is not 0");
@@ -39,9 +39,9 @@ contract("Dex", accounts => {
 
 
         //Send LINK tokens to accounts 1, 2, 3 from account 0
-        await link.transfer(accounts[1], 50)
-        await link.transfer(accounts[2], 50)
-        await link.transfer(accounts[3], 50)
+        await link.transfer(accounts[1], 150)
+        await link.transfer(accounts[2], 150)
+        await link.transfer(accounts[3], 150)
 
         //Approve DEX for accounts 1, 2, 3
         await link.approve(dex.address, 50, {from: accounts[1]});
@@ -87,7 +87,7 @@ contract("Dex", accounts => {
         let balanceAfter = await dex.balances(accounts[0], web3.utils.fromUtf8("LINK"))
 
         //Buyer should have 15 more link after, even though order was for 50. 
-        assert.equal(balanceBefore + 15, balanceAfter);
+        assert.equal(balanceBefore.toNumber() + 15, balanceAfter.toNumber());
     })
 
     //The eth balance of the buyer should decrease with the filled amount
@@ -104,7 +104,7 @@ contract("Dex", accounts => {
         await dex.createMarketOrder(0, web3.utils.fromUtf8("LINK"), 1);
         let balanceAfter = await dex.balances(accounts[0], web3.utils.fromUtf8("ETH"));
 
-        assert.equal(balanceBefore - 300, balanceAfter);
+        assert.equal(balanceBefore.toNumber() - 300, balanceAfter.toNumber());
     })
 
     //The token balances of the limit order sellers should decrease with the filled amounts.
@@ -114,8 +114,6 @@ contract("Dex", accounts => {
 
         let orderbook = await dex.getOrderBook(web3.utils.fromUtf8("LINK"), 1); //Get sell side orderbook
         assert(orderbook.length == 0, "Sell side Orderbook should be empty at start of test");
-
-        //Seller Account[1] already has approved and deposited Link
 
         //Seller Account[2] deposits link
         await link.approve(dex.address, 500, {from: accounts[2]});
@@ -135,18 +133,25 @@ contract("Dex", accounts => {
         let account1balanceAfter = await dex.balances(accounts[1], web3.utils.fromUtf8("LINK"));
         let account2balanceAfter = await dex.balances(accounts[2], web3.utils.fromUtf8("LINK"));
 
-        assert.equal(account1balanceBefore - 1, account1balanceAfter);
-        assert.equal(account2balanceBefore - 1, account2balanceAfter);
+        assert.equal(account1balanceBefore.toNumber() - 1, account1balanceAfter.toNumber());
+        assert.equal(account2balanceBefore.toNumber() - 1, account2balanceAfter.toNumber());
     })
 
     //Filled limit orders should be removed from the orderbook
-    it("Filled limit orders should be removed from the orderbook", async () => {
+    xit("Filled limit orders should be removed from the orderbook", async () => {
         let dex = await Dex.deployed()
+        let link = await Link.deployed()
+        await dex.addToken(web3.utils.fromUtf8("LINK"), link.address)
+
+        //Seller deposits link and creates a sell limit order for 1 link for 300 wei
+        await link.approve(dex.address, 500);
+        await dex.deposit(50, web3.utils.fromUtf8("LINK"));
+        
+        await dex.depositEth({value: 10000});
 
         let orderbook = await dex.getOrderBook(web3.utils.fromUtf8("LINK"), 1); //Get sell side orderbook
-        assert(orderbook.length == 0, "Sell side Orderbook should be empty at start of test");
 
-        await dex.createLimitOrder(1, web3.utils.fromUtf8("LINK"), 1, 300, {from: accounts[1]})
+        await dex.createLimitOrder(1, web3.utils.fromUtf8("LINK"), 1, 300)
         await dex.createMarketOrder(0, web3.utils.fromUtf8("LINK"), 1);
 
         orderbook = await dex.getOrderBook(web3.utils.fromUtf8("LINK"), 1); //Get sell side orderbook
@@ -176,8 +181,9 @@ contract("Dex", accounts => {
         await dex.createLimitOrder(1, web3.utils.fromUtf8("LINK"), 5, 300, {from: accounts[1]})
 
         await truffleAssert.reverts(
-            dex.createMarketOrder(0, web3.utils.fromUtf8("LINK"), 10)
+            dex.createMarketOrder(0, web3.utils.fromUtf8("LINK"), 5, {from: accounts[4]})
         )
     })
+
 
 })
