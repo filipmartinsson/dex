@@ -1,11 +1,8 @@
-
-//The first order ([0]) in the BUY order book should have the highest price
-
 const Dex = artifacts.require("Dex")
 const Link = artifacts.require("Link")
 const truffleAssert = require('truffle-assertions');
 
-contract("Dex", accounts => {
+contract.skip("Dex", accounts => {
     //The user must have ETH deposited such that deposited eth >= buy order value
     it("should throw an error if ETH balance is too low when creating BUY limit order", async () => {
         let dex = await Dex.deployed()
@@ -32,24 +29,25 @@ contract("Dex", accounts => {
             dex.createLimitOrder(1, web3.utils.fromUtf8("LINK"), 10, 1)
         )
     })
-    //The first order ([0]) in the BUY order book should have the highest price
-    it("first order in the BUY order book should have the highest price", async () => {
+    //The BUY order book should be ordered on price from highest to lowest starting at index 0
+    it("The BUY order book should be ordered on price from highest to lowest starting at index 0", async () => {
         let dex = await Dex.deployed()
         let link = await Link.deployed()
         await link.approve(dex.address, 500);
         await dex.depositEth({value: 3000});
-        await dex.createLimitOrder(0, web3.utils.fromUtf8("LINK"), 1, 300)
-        await dex.createLimitOrder(0, web3.utils.fromUtf8("LINK"), 1, 100)
-        await dex.createLimitOrder(0, web3.utils.fromUtf8("LINK"), 1, 200)
+        await dex.createLimitOrder(0, web3.utils.fromUtf8("LINK"), 1, 300); 
+        await dex.createLimitOrder(0, web3.utils.fromUtf8("LINK"), 1, 100);
+        await dex.createLimitOrder(0, web3.utils.fromUtf8("LINK"), 1, 200);
 
         let orderbook = await dex.getOrderBook(web3.utils.fromUtf8("LINK"), 0);
+        assert(orderbook.length > 0);
         console.log(orderbook);
         for (let i = 0; i < orderbook.length - 1; i++) {
             assert(orderbook[i].price >= orderbook[i+1].price, "not right order in buy book")
         }
     })
-    //The first order ([0]) in the SELL order book should have the lowest price
-    it("first order in the SELL order book should have the lowest price", async () => {
+    //The SELL order book should be ordered on price from lowest to highest starting at index 0
+    it("The SELL order book should be ordered on price from lowest to highest starting at index 0", async () => {
         let dex = await Dex.deployed()
         let link = await Link.deployed()
         await link.approve(dex.address, 500);
@@ -58,8 +56,19 @@ contract("Dex", accounts => {
         await dex.createLimitOrder(1, web3.utils.fromUtf8("LINK"), 1, 200)
 
         let orderbook = await dex.getOrderBook(web3.utils.fromUtf8("LINK"), 1);
+        assert(orderbook.length > 0);
+
         for (let i = 0; i < orderbook.length - 1; i++) {
             assert(orderbook[i].price <= orderbook[i+1].price, "not right order in sell book")
         }
     })
+
+//When creating a SELL market order, the seller needs to have enough tokens for the trade
+//When creating a BUY market order, the buyer needs to have enough ETH for the trade
+//Market orders can be submitted even if the order book is empty
+//Market orders should be filled until the order book is empty or the market order is 100% filled
+//The eth balance of the buyer should decrease with the filled amount
+//The token balances of the limit order sellers should decrease with the filled amounts.
+//Filled limit orders should be removed from the orderbook
+
 })

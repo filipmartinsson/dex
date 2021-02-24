@@ -21,7 +21,7 @@ contract Dex is Wallet {
         uint price;
     }
 
-    uint public nextOrderId;
+    uint public nextOrderId = 0;
 
     mapping(bytes32 => mapping(uint => Order[])) public orderBook;
 
@@ -31,22 +31,23 @@ contract Dex is Wallet {
 
     function createLimitOrder(Side side, bytes32 ticker, uint amount, uint price) public{
         if(side == Side.BUY){
-            require(balances[msg.sender]["ETH"] >= amount.mul(price), "Balance too low");
+            require(balances[msg.sender]["ETH"] >= amount.mul(price));
         }
-        if(side == Side.SELL){
-            require(balances[msg.sender][ticker] >= amount, "Balance too low");
+        else if(side == Side.SELL){
+            require(balances[msg.sender][ticker] >= amount);
         }
 
         Order[] storage orders = orderBook[ticker][uint(side)];
-        orders.push(Order(nextOrderId, msg.sender, side, ticker, amount, price));
-        Order storage newOrder = orders[orders.length - 1];
+        orders.push(
+            Order(nextOrderId, msg.sender, side, ticker, amount, price)
+        );
 
+        //Bubble sort
         uint i = orders.length > 0 ? orders.length - 1 : 0;
-
         if(side == Side.BUY){
             while(i > 0){
                 if(orders[i - 1].price > orders[i].price) {
-                    break;   
+                    break;
                 }
                 Order memory orderToMove = orders[i - 1];
                 orders[i - 1] = orders[i];
@@ -54,7 +55,7 @@ contract Dex is Wallet {
                 i--;
             }
         }
-        else if (side == Side.SELL){
+        else if(side == Side.SELL){
             while(i > 0){
                 if(orders[i - 1].price < orders[i].price) {
                     break;   
@@ -65,8 +66,12 @@ contract Dex is Wallet {
                 i--;
             }
         }
-        nextOrderId++;
 
+        nextOrderId++;
+    }
+
+    function createMarketOrder(Side side, bytes32 ticker, uint amount) public{
+        
     }
 
 }
