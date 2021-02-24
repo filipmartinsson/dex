@@ -39,7 +39,7 @@ contract("Dex", accounts => {
         )
     })
     //Market orders should be filled until the order book is empty or the market order is 100% filled
-    it("Market orders should be filled until market order is 100% filled", async () => {
+    it("Market orders should not fill more limit orders than the market order amount", async () => {
         let dex = await Dex.deployed()
         let link = await Link.deployed()
 
@@ -53,9 +53,6 @@ contract("Dex", accounts => {
         await link.transfer(accounts[1], 50)
         await link.transfer(accounts[2], 50)
         await link.transfer(accounts[3], 50)
-
-        let balance = await link.balanceOf(accounts[1]);
-        console.log(balance.toNumber());
 
         //Approve DEX for accounts 1, 2, 3
         await link.approve(dex.address, 50, {from: accounts[1]});
@@ -88,7 +85,7 @@ contract("Dex", accounts => {
         assert(orderbook.length == 1, "Sell side Orderbook should have 1 order left");
 
         //Fill up the sell order book again
-        await dex.createLimitOrder(1, web3.utils.fromUtf8("LINK"), 5, 400, {from: accounts[2]})
+        await dex.createLimitOrder(1, web3.utils.fromUtf8("LINK"), 5, 400, {from: accounts[1]})
         await dex.createLimitOrder(1, web3.utils.fromUtf8("LINK"), 5, 500, {from: accounts[2]})
 
         //check buyer link balance before link purchase
@@ -97,7 +94,7 @@ contract("Dex", accounts => {
         //Create market order that could fill more than the entire order book (15 link)
         await dex.createMarketOrder(0, web3.utils.fromUtf8("LINK"), 50);
 
-        //check buyer link balance before link purchase
+        //check buyer link balance after link purchase
         let balanceAfter = await dex.balances(accounts[0], web3.utils.fromUtf8("LINK"))
 
         //Buyer should have 15 more link after, even though order was for 50. 
@@ -170,7 +167,6 @@ contract("Dex", accounts => {
     //Partly filled limit orders should be modified to represent the filled/remaining amount
     it("Limit orders filled property should be set correctly after a trade", async () => {
         let dex = await Dex.deployed()
-        let link = await Link.deployed()
 
         let orderbook = await dex.getOrderBook(web3.utils.fromUtf8("LINK"), 1); //Get sell side orderbook
         assert(orderbook.length == 0, "Sell side Orderbook should be empty at start of test");
