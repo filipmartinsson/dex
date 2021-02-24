@@ -14,17 +14,6 @@ contract("Dex", accounts => {
             dex.createMarketOrder(1, web3.utils.fromUtf8("LINK"), 10)
         )
     })
-    //When creating a BUY market order, the buyer needs to have enough ETH for the trade
-    it("Should throw an error when creating a buy market order without adequate ETH balance", async () => {
-        let dex = await Dex.deployed()
-        
-        let balance = await dex.balances(accounts[0], web3.utils.fromUtf8("ETH"))
-        assert.equal( balance.toNumber(), 0, "Initial ETH balance is not 0" );
-        
-        await truffleAssert.reverts(
-            dex.createMarketOrder(0, web3.utils.fromUtf8("LINK"), 10)
-        )
-    })
     //Market orders can be submitted even if the order book is empty
     it("Market orders can be submitted even if the order book is empty", async () => {
         let dex = await Dex.deployed()
@@ -178,4 +167,17 @@ contract("Dex", accounts => {
         assert.equal(orderbook[0].filled, 2);
         assert.equal(orderbook[0].amount, 5);
     })
+    //When creating a BUY market order, the buyer needs to have enough ETH for the trade
+    it("Should throw an error when creating a buy market order without adequate ETH balance", async () => {
+        let dex = await Dex.deployed()
+        
+        let balance = await dex.balances(accounts[4], web3.utils.fromUtf8("ETH"))
+        assert.equal( balance.toNumber(), 0, "Initial ETH balance is not 0" );
+        await dex.createLimitOrder(1, web3.utils.fromUtf8("LINK"), 5, 300, {from: accounts[1]})
+
+        await truffleAssert.reverts(
+            dex.createMarketOrder(0, web3.utils.fromUtf8("LINK"), 10)
+        )
+    })
+
 })
