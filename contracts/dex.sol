@@ -25,6 +25,10 @@ contract Dex is Wallet {
     uint public nextOrderId = 0;
 
     mapping(bytes32 => mapping(uint => Order[])) public orderBook;
+    
+    // For all limit orders, funds will be locked away in limitOrderBalances,
+    // in order to preven users from withdrawing them. 
+    mapping(address => mapping(bytes32 => uint256)) public limitOrderBalances;
 
     function getOrderBook(bytes32 ticker, Side side) view public returns(Order[] memory){
         return orderBook[ticker][uint(side)];
@@ -33,9 +37,15 @@ contract Dex is Wallet {
     function createLimitOrder(Side side, bytes32 ticker, uint amount, uint price) public{
         if(side == Side.BUY){
             require(balances[msg.sender]["ETH"] >= amount.mul(price));
+
+            balances[msg.sender]["ETH"] = balances[msg.sender]["ETH"].sub(amount.mul(price));
+            limitOrderBalances[msg.sender]["ETH"] = limitOrderBalances[msg.sender]["ETH"].add(amount.mul(price));
         }
         else if(side == Side.SELL){
             require(balances[msg.sender][ticker] >= amount);
+
+            balances[msg.sender][ticker] = balances[msg.sender][ticker].sub(amount);
+            limitOrderBalances[msg.sender][ticker] = limitOrderBalances[msg.sender][ticker].add(amount);
         }
 
         Order[] storage orders = orderBook[ticker][uint(side)];
@@ -109,7 +119,7 @@ contract Dex is Wallet {
                 balances[msg.sender][ticker] = balances[msg.sender][ticker].add(filled);
                 balances[msg.sender]["ETH"] = balances[msg.sender]["ETH"].sub(cost);
                 
-                balances[orders[i].trader][ticker] = balances[orders[i].trader][ticker].sub(filled);
+                limitOrderBalances[orders[i].trader][ticker] = limitOrderBalances[orders[i].trader][ticker].sub(filled);
                 balances[orders[i].trader]["ETH"] = balances[orders[i].trader]["ETH"].add(cost);
             }
             else if(side == Side.SELL){
@@ -118,7 +128,7 @@ contract Dex is Wallet {
                 balances[msg.sender]["ETH"] = balances[msg.sender]["ETH"].add(cost);
                 
                 balances[orders[i].trader][ticker] = balances[orders[i].trader][ticker].add(filled);
-                balances[orders[i].trader]["ETH"] = balances[orders[i].trader]["ETH"].sub(cost);
+                limitOrderBalances[orders[i].trader]["ETH"] = limitOrderBalances[orders[i].trader]["ETH"].sub(cost);
             }
             
         }

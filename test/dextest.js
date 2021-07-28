@@ -2,7 +2,14 @@ const Dex = artifacts.require("Dex")
 const Link = artifacts.require("Link")
 const truffleAssert = require('truffle-assertions');
 
-contract.skip("Dex", accounts => {
+contract("Dex", accounts => {
+    before("Add tokens to dex", async () => {
+        let dex = await Dex.deployed()
+        let link = await Link.deployed()
+        await truffleAssert.passes(
+            dex.addToken(web3.utils.fromUtf8("LINK"), link.address, {from: accounts[0]})
+        )
+    })
     //The user must have ETH deposited such that deposited eth >= buy order value
     it("should throw an error if ETH balance is too low when creating BUY limit order", async () => {
         let dex = await Dex.deployed()
@@ -46,11 +53,15 @@ contract.skip("Dex", accounts => {
             assert(orderbook[i].price >= orderbook[i+1].price, "not right order in buy book")
         }
     })
+
     //The SELL order book should be ordered on price from lowest to highest starting at index 0
     it("The SELL order book should be ordered on price from lowest to highest starting at index 0", async () => {
         let dex = await Dex.deployed()
         let link = await Link.deployed()
-        await link.approve(dex.address, 500);
+
+        await link.approve(dex.address, 3);
+        await dex.deposit(3, web3.utils.fromUtf8("LINK"));
+        
         await dex.createLimitOrder(1, web3.utils.fromUtf8("LINK"), 1, 300)
         await dex.createLimitOrder(1, web3.utils.fromUtf8("LINK"), 1, 100)
         await dex.createLimitOrder(1, web3.utils.fromUtf8("LINK"), 1, 200)

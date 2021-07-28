@@ -123,22 +123,22 @@ contract("Dex", accounts => {
         await dex.createLimitOrder(1, web3.utils.fromUtf8("LINK"), 1, 400, {from: accounts[2]})
 
         //Check sellers Link balances before trade
-        let account1balanceBefore = await dex.balances(accounts[1], web3.utils.fromUtf8("LINK"));
-        let account2balanceBefore = await dex.balances(accounts[2], web3.utils.fromUtf8("LINK"));
+        let account1balanceBefore = await dex.limitOrderBalances(accounts[1], web3.utils.fromUtf8("LINK"));
+        let account2balanceBefore = await dex.limitOrderBalances(accounts[2], web3.utils.fromUtf8("LINK"));
 
         //Account[0] created market order to buy up both sell orders
         await dex.createMarketOrder(0, web3.utils.fromUtf8("LINK"), 2);
 
         //Check sellers Link balances after trade
-        let account1balanceAfter = await dex.balances(accounts[1], web3.utils.fromUtf8("LINK"));
-        let account2balanceAfter = await dex.balances(accounts[2], web3.utils.fromUtf8("LINK"));
+        let account1balanceAfter = await dex.limitOrderBalances(accounts[1], web3.utils.fromUtf8("LINK"));
+        let account2balanceAfter = await dex.limitOrderBalances(accounts[2], web3.utils.fromUtf8("LINK"));
 
         assert.equal(account1balanceBefore.toNumber() - 1, account1balanceAfter.toNumber());
         assert.equal(account2balanceBefore.toNumber() - 1, account2balanceAfter.toNumber());
     })
 
     //Filled limit orders should be removed from the orderbook
-    xit("Filled limit orders should be removed from the orderbook", async () => {
+    it("Filled limit orders should be removed from the orderbook", async () => {
         let dex = await Dex.deployed()
         let link = await Link.deployed()
         await dex.addToken(web3.utils.fromUtf8("LINK"), link.address)
